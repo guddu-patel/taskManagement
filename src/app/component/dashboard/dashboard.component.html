@@ -1,0 +1,194 @@
+<div class="input-group mb-3 input-group-sm">
+    <input type="text" class="form-control" placeholder="Search task..." (keyup)="subject.next($event.target.value)">
+    <div class="input-group-append">
+        <span class="input-group-text">Search</span>
+    </div>
+</div>
+
+<app-loader *ngIf="isLoading"></app-loader>
+
+<!-- create item -->
+<div class="modal fade" id="newItem">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <h4 class="modal-title">{{editMode?'Update':'Create'}} new task</h4>
+                <button type="button" class="close" data-dismiss="modal" id="closeModal"
+                    (click)="changeAssinMode=false">&times;</button>
+            </div>
+
+            <!-- Modal body -->
+            <form [formGroup]="createTaskForm" (ngSubmit)="onSubmit()">
+                <input type="hidden" formControlName="taskid">
+                <div class="modal-body">
+                    <div *ngIf="!changeAssinMode">
+                        <div class="form-group">
+                            <label>Message</label>
+                            <input type="text" class="form-control" [ngClass]="{
+                                'is-invalid': message.invalid && (message.dirty || message.touched||submitted),
+                                'is-valid': message.valid && (message.dirty || message.touched)
+                              }" formControlName="message" required />
+                            <div class="form-control-feedback text-danger"
+                                *ngIf="message.errors && (message.dirty || message.touched||submitted)">
+                                <p *ngIf="message.errors.required">Message is required</p>
+                                <p *ngIf="message.errors.minlength">Message reqired atlest 5 characters</p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Due date</label>
+                            <input type="datetime-local" value="2010-10-10" class="form-control" [ngClass]="{
+                                'is-invalid': due_date.invalid && (due_date.dirty || due_date.touched||submitted),
+                                'is-valid': due_date.valid && (due_date.dirty || due_date.touched)
+                              }" formControlName="due_date" required />
+                            <div class="form-control-feedback text-danger"
+                                *ngIf="due_date.errors && (due_date.dirty || due_date.touched||submitted)">
+                                <p *ngIf="due_date.errors.required">Due date is required</p>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Priority</label>
+                            <select class="form-control" formControlName="priority" [ngClass]="{
+                                'is-invalid': priority.invalid && (priority.dirty || priority.touched||submitted),
+                                'is-valid': priority.valid && (priority.dirty || priority.touched)
+                              }">
+                                <option value="0">No priority</option>
+                                <option value="1">High</option>
+                                <option value="2">Medium</option>
+                                <option value="3">Low</option>
+                            </select>
+                            <div class="form-control-feedback text-danger"
+                                *ngIf="priority.errors && (priority.dirty || priority.touched||submitted)">
+                                <p *ngIf="priority.errors.required">Priority is required</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Assinged to</label>
+                        <select class="form-control" formControlName="assigned_to" [ngClass]="{
+                            'is-invalid': assigned_to.invalid && (assigned_to.dirty || assigned_to.touched||submitted),
+                            'is-valid': assigned_to.valid && (assigned_to.dirty || assigned_to.touched)
+                          }">
+                            <option value="" disabled>Please select a user</option>
+                            <option *ngFor="let user of userList" [value]="user.id">
+                                {{user.name}}
+                            </option>
+                        </select>
+                        <div class="form-control-feedback text-danger"
+                            *ngIf="assigned_to.errors && (assigned_to.dirty || assigned_to.touched||submitted)">
+                            <p *ngIf="assigned_to.errors.required">User is required</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Modal footer -->
+                <div class="modal-footer">
+                    <p *ngIf="submitted" class="text-danger">Submitting data...</p>
+                    <div>
+                        <button type="submit" class="btn btn-success mr-2" [disabled]='submitted'>Submit</button>
+                        <button type="reset" class="btn btn-danger"
+                            (click)="createTaskForm.reset();submitted=false">Reset</button>
+                    </div>
+
+                </div>
+            </form>
+
+
+
+        </div>
+    </div>
+</div>
+<!-- end create item -->
+
+<ng-template #taskListTemplate let-task="task">
+    <div class="m-0 w-100">
+        {{task.message}}
+        <div class="btn-group btn-group-sm float-right">
+
+            <button (click)="editForm(task);changeAssinMode=true" class="btn btn-success " data-target="#newItem"
+                data-toggle="modal">Assign</button>
+            <button (click)="editForm(task)" class="btn btn-info" data-target="#newItem"
+                data-toggle="modal">Edit</button>
+            <button (click)="deleteTask(task)" class="btn btn-danger">Del</button>
+        </div>
+    </div>
+</ng-template>
+
+
+
+<div cdkDropListGroup class="row">
+    <div class="example-container col-12">
+
+        <div class="card">
+            <div class="card-header d-flex">
+                <h4>Task list</h4>
+                <button data-target="#newItem" data-toggle="modal" class="btn btn-info ml-auto"
+                    (click)="initCreatForm()">Create new</button>
+            </div>
+            <div class="card-body">
+
+                <div cdkDropList [cdkDropListData]="taskList" class="example-list list-group list-group-flush"
+                    (cdkDropListDropped)="onDrop($event,0)">
+                    <div class="example-box list-group-item" *ngFor="let item of taskList" cdkDrag>
+                        <ng-container [ngTemplateOutlet]="taskListTemplate" [ngTemplateOutletContext]="{'task':item}">
+                        </ng-container>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <div class="example-container col-sm-4">
+        <div class="card">
+            <div class="card-header">
+                <h4>High priority</h4>
+            </div>
+            <div class="card-body">
+
+                <div cdkDropList [cdkDropListData]="taskPriority.high" class="example-list list-group list-group-flush"
+                    (cdkDropListDropped)="onDrop($event,1)">
+                    <div class="example-box list-group-item" *ngFor="let item of taskPriority.high" cdkDrag>
+                        <ng-container [ngTemplateOutlet]="taskListTemplate" [ngTemplateOutletContext]="{'task':item}">
+                        </ng-container>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="example-container col-sm-4">
+        <div class="card">
+            <div class="card-header">
+                <h4>Medium priority</h4>
+            </div>
+            <div class="card-body">
+
+                <div cdkDropList [cdkDropListData]="taskPriority.medium" class="example-list"
+                    (cdkDropListDropped)="onDrop($event,2)">
+                    <div class="example-box" *ngFor="let item of taskPriority.medium" cdkDrag>
+                        <ng-container [ngTemplateOutlet]="taskListTemplate" [ngTemplateOutletContext]="{'task':item}">
+                        </ng-container>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="example-container col-sm-4">
+        <div class="card">
+            <div class="card-header">
+                <h4>Low priority</h4>
+            </div>
+            <div class="card-body">
+
+                <div cdkDropList [cdkDropListData]="taskPriority.low" class="example-list"
+                    (cdkDropListDropped)="onDrop($event,3)">
+                    <div class="example-box" *ngFor="let item of taskPriority.low" cdkDrag>
+                        <ng-container [ngTemplateOutlet]="taskListTemplate" [ngTemplateOutletContext]="{'task':item}">
+                        </ng-container>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
